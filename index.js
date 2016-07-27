@@ -26,6 +26,22 @@ function sendTextMessage(sender, text) {
     })
 }
 
+function processMessageWithWit(message) {
+    request({
+        url: 'https://api.wit.ai/message',
+        method: 'GET',
+        qs: {
+            v: '20160526',
+            q: message
+        },
+        headers: {
+            Authorization: 'Bearer CHTPIYZYD5NSPUNCCXPCT63Y4KRXJB64' 
+        }
+    }, (error, res, body)=>{
+        console.log(body);
+    })
+}
+
 app.set('port', (process.env.PORT || 5000))
 
 // Process application/x-www-form-urlencoded
@@ -54,7 +70,9 @@ app.post('/webhook/', function (req, res) {
         let sender = event.sender.id
         if (event.message && event.message.text) {
             let text = event.message.text
-            sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+            // sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+            sendTextMessage(sender, "processing request")
+            processMessageWithWit(text)
         }
     }
     res.sendStatus(200)
