@@ -27,10 +27,8 @@ app.get('/webhook/', function (req, res) {
 })
 
 app.post(/webhook/, (req, res)=>{
-
-    console.log(req);
+    console.log(req.body);
     res.sendStatus(200);
-
 });
 
 // Spin up the server
