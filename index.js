@@ -3,6 +3,7 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const request = require('request')
+const timer = require('timers')
 const app = express()
 
 const token = "EAADaiWX7pE0BAJBXkBNCOZAwdTPiH7dIG5sb7ZBfrR4cdpab1s5R8NjLbr1yuFTprQtzM0w1ea2Wl9rUhoHSbl1DfhJZCLn7cZBZB6AA2dEHpYczohf3ZC1p2qLfvUQy2y71ZApiqOCglCo4QDyTItND4EqosmvtC50o9T6DzE8ZBAZDZD"
@@ -18,15 +19,19 @@ function sendTextMessage(sender, text) {
             message: messageData,
         }
     }, function (error, response, body) {
-        if (error) {
-            console.log('Error sending messages: ', error)
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error)
-        }
+        // if (error) {
+        //     console.log('Error sending messages: ', error)
+        // } else if (response.body.error) {
+        //     console.log('Error: ', response.body.error)
+        // }
+        console.log('___');
+        console.log(body);
+        console.log('___');
     })
 }
 
-function processMessageWithWit(message) {
+function processMessageWithWit(message, sender) {
+    console.log('calling wit api');
     request({
         url: 'https://api.wit.ai/message',
         method: 'GET',
@@ -38,8 +43,42 @@ function processMessageWithWit(message) {
             Authorization: 'Bearer CHTPIYZYD5NSPUNCCXPCT63Y4KRXJB64'
         }
     }, (error, res, body) => {
-        console.log(body);
-        console.log(res)
+        let data = JSON.parse(body);
+
+        if (data.entities.duration) {
+            let duration = data.entities.duration[0].normalized.value;
+            sendTextMessage(sender, "Timer set for " + duration + " seconds")
+
+            if (data.entities.freq) {
+                console.log("interval query");
+                timer.setInterval(() => {
+                    sendTextMessage(sender, "PING!!!")
+                }, duration * 1000);
+            } else {
+                console.log("one time query");
+                timer.setTimeout(() => {
+                    sendTextMessage(sender, "PING!!!");
+                }, duration * 1000)
+            }
+
+        } else if (data.entities.number) {
+            let duration = data.entities.number[0].value;
+            sendTextMessage(sender, "Timer set for " + duration + " milliseconds")
+
+            if (data.entities.freq) {
+                console.log("interval query");
+                timer.setInterval(() => {
+                    sendTextMessage(sender, "PING!!!")
+                }, duration);
+            } else {
+                console.log("one time query");
+                timer.setTimeout(() => {
+                    sendTextMessage(sender, "PING!!!");
+                }, duration)
+            }
+        }
+
+
     })
 }
 
@@ -66,6 +105,8 @@ app.get('/webhook/', function (req, res) {
 
 app.post('/webhook/', function (req, res) {
     var data = req.body;
+
+    console.log(data.entry.length);
 
     // Make sure this is a page subscription
     if (data.object == 'page') {
@@ -102,8 +143,7 @@ function receivedMessage(event) {
     let text = event.message.text;
     let sender = event.sender.id;
 
-    sendTextMessage(sender, "Processing Request");
-    processMessageWithWit(text);
+    processMessageWithWit(text, sender);
 }
 
 
