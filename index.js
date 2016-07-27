@@ -8,16 +8,16 @@ const app = express()
 const token = "EAADaiWX7pE0BAJBXkBNCOZAwdTPiH7dIG5sb7ZBfrR4cdpab1s5R8NjLbr1yuFTprQtzM0w1ea2Wl9rUhoHSbl1DfhJZCLn7cZBZB6AA2dEHpYczohf3ZC1p2qLfvUQy2y71ZApiqOCglCo4QDyTItND4EqosmvtC50o9T6DzE8ZBAZDZD"
 
 function sendTextMessage(sender, text) {
-    let messageData = { text:text }
+    let messageData = { text: text }
     request({
         url: 'https://graph.facebook.com/v2.6/me/messages',
-        qs: {access_token:token},
+        qs: { access_token: token },
         method: 'POST',
         json: {
-            recipient: {id:sender},
+            recipient: { id: sender },
             message: messageData,
         }
-    }, function(error, response, body) {
+    }, function (error, response, body) {
         if (error) {
             console.log('Error sending messages: ', error)
         } else if (response.body.error) {
@@ -35,17 +35,18 @@ function processMessageWithWit(message) {
             q: message
         },
         headers: {
-            Authorization: 'Bearer CHTPIYZYD5NSPUNCCXPCT63Y4KRXJB64' 
+            Authorization: 'Bearer CHTPIYZYD5NSPUNCCXPCT63Y4KRXJB64'
         }
-    }, (error, res, body)=>{
+    }, (error, res, body) => {
         console.log(body);
+        console.log(res)
     })
 }
 
 app.set('port', (process.env.PORT || 5000))
 
 // Process application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(bodyParser.urlencoded({ extended: false }))
 
 // Process application/json
 app.use(bodyParser.json())
@@ -64,22 +65,49 @@ app.get('/webhook/', function (req, res) {
 })
 
 app.post('/webhook/', function (req, res) {
-    let messaging_events = req.body.entry[0].messaging
-    for (let i = 0; i < messaging_events.length; i++) {
-        let event = req.body.entry[0].messaging[i]
-        let sender = event.sender.id
-        if (event.message && event.message.text) {
-            let text = event.message.text
-            // sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
-            sendTextMessage(sender, "processing request")
-            processMessageWithWit(text)
-        }
+    var data = req.body;
+
+    // Make sure this is a page subscription
+    if (data.object == 'page') {
+        // Iterate over each entry
+        // There may be multiple if batched
+        data.entry.forEach(function (pageEntry) {
+            var pageID = pageEntry.id;
+            var timeOfEvent = pageEntry.time;
+
+            // Iterate over each messaging event
+            pageEntry.messaging.forEach(function (messagingEvent) {
+                if (messagingEvent.message) {
+                    receivedMessage(messagingEvent);
+                }
+            });
+        });
+
+        // let messaging_events = req.body.entry[0].messaging
+        // for (let i = 0; i < messaging_events.length; i++) {
+        //     let event = req.body.entry[0].messaging[i]
+        //     let sender = event.sender.id
+        //     if (event.message && event.message.text) {
+        //         let text = event.message.text
+        //         // sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+        //         sendTextMessage(sender, "processing request")
+        //         processMessageWithWit(text)
+        //     }
+        // }
+        res.sendStatus(200)
     }
-    res.sendStatus(200)
 })
+
+function receivedMessage(event) {
+    let text = event.message.text;
+    let sender = event.sender.id;
+
+    sendTextMessage(sender, "Processing Request");
+    processMessageWithWit(text);
+}
 
 
 // Spin up the server
-app.listen(app.get('port'), function() {
+app.listen(app.get('port'), function () {
     console.log('running on port', app.get('port'))
 })
